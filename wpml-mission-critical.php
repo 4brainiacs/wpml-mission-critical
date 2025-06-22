@@ -484,18 +484,37 @@ if ( $using_fallback
                     continue;
                 }
                 
-                if ($new_id && is_numeric($new_id) && $new_id !== $post_id) {
-                    // Clean up meta
-                    delete_post_meta($new_id, '_wpml_mission_status');
-                    delete_post_meta($new_id, '_wpml_mission_data');
-                    delete_post_meta($new_id, '_wpml_mission_results');
-                    
-                    $success_count++;
-                    $results[$target_lang] = $new_id;
-                    $this->mission_log('SUCCESS', "Created $target_lang version: ID $new_id");
-                } else {
-                    $this->mission_log('WARN', "Failed to create {$target_lang} version");
-                }
+                if ( $new_id && is_numeric( $new_id ) && $new_id !== $post_id ) {
+    // Clean up meta
+    delete_post_meta( $new_id, '_wpml_mission_status' );
+    delete_post_meta( $new_id, '_wpml_mission_data' );
+    delete_post_meta( $new_id, '_wpml_mission_results' );
+
+    $success_count++;
+    $results[ $target_lang ] = $new_id;
+    $this->mission_log( 'SUCCESS', "Created $target_lang version: ID $new_id" );
+
+    /* ─── FEATURED-IMAGE COPY ─────────────────────────────────── */
+    $orig_thumb = get_post_thumbnail_id( $post_id );
+    if ( $orig_thumb ) {
+        $dup_thumb = apply_filters(
+            'wpml_object_id',
+            $orig_thumb,
+            'attachment',
+            false,
+            $target_lang
+        ) ?: $orig_thumb; // fallback to original if lookup fails
+
+        set_post_thumbnail( $new_id, $dup_thumb );
+        $this->mission_log(
+            'THUMB',
+            "Featured image copied (orig {$orig_thumb} → dup {$dup_thumb}) for {$target_lang}"
+        );
+    }
+    /* ─────────────────────────────────────────────────────────── */
+} else {
+    $this->mission_log( 'WARN', "Failed to create {$target_lang} version" );
+}
                 
                 // Sleep between operations
                 if ($success_count < count($languages_to_process)) {
